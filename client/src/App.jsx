@@ -1,0 +1,81 @@
+import React, { useEffect, useState } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import Home from './pages/Home'
+import Auth from './pages/Auths'
+import axios from 'axios'
+import { useDispatch, useSelector } from 'react-redux'
+import { setUserData } from './redux/userSlice'
+import InterviewPage from './pages/InterviewPage'
+import InterviewHistory from './pages/InterviewHistory'
+import Pricing from './pages/Pricing'
+import InterviewReport from './pages/InterviewReport'
+import AptitudePage from './pages/AptitudePage'
+import Layout from './components/Layout'
+import BehaviouralQuestions from './pages/BehaviouralQuestions'
+import About from './pages/About'
+
+export const ServerUrl = import.meta.env.VITE_API_URL?.replace(/\/+$|\/$/, '') || 'http://localhost:8000'
+
+const PageLoader = () => (
+  <div className='flex min-h-screen items-center justify-center bg-paper text-graphite'>
+    Loading…
+  </div>
+)
+
+function App() {
+
+  const dispatch = useDispatch()
+  const { userData } = useSelector((state) => state.user)
+  const [authLoading, setAuthLoading] = useState(true)
+  const location = useLocation()
+
+  useEffect(()=>{
+    const getUser = async () => {
+      if (localStorage.getItem("liveprep-auth") !== "true") {
+        dispatch(setUserData(null))
+        setAuthLoading(false)
+        return
+      }
+
+      try {
+        const result = await axios.get(ServerUrl +"/api/user/current-user", {withCredentials:true})
+        dispatch(setUserData(result.data))
+      } catch (error) {
+        if (error.response?.status !== 401) {
+          console.log(error)
+        }
+        localStorage.removeItem("liveprep-auth")
+        dispatch(setUserData(null))
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+    getUser()
+
+  },[dispatch])
+
+  const protectedPage = (children) => {
+    if (authLoading) return <PageLoader />
+    if (!userData) return <Navigate to='/auth' replace state={{ from: location.pathname }} />
+    return <Layout>{children}</Layout>
+  }
+
+  return (
+    <>
+      <Routes>
+        <Route path='/auth' element={authLoading ? <PageLoader /> : userData ? <Navigate to='/' replace /> : <Auth/>}/>
+        <Route path='/' element={<Layout><Home/></Layout>} />
+        <Route path='/interview' element={protectedPage(<InterviewPage/>)} />
+        <Route path='/hr-interview' element={protectedPage(<InterviewPage initialMode="HR"/>)} />
+        <Route path='/behavioural-interview' element={protectedPage(<BehaviouralQuestions/>)} />
+        <Route path='/aptitude' element={protectedPage(<AptitudePage/>)} />
+        <Route path='/about' element={<Layout><About/></Layout>} />
+        <Route path='/history' element={protectedPage(<InterviewHistory/>)} />
+        <Route path='/pricing' element={protectedPage(<Pricing/>)} />
+        <Route path='/report/:id' element={protectedPage(<InterviewReport/>)} />
+      </Routes>
+    </>
+  )
+}
+
+export default App
