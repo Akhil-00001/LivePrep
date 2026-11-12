@@ -14,6 +14,7 @@ const app = express()
 // Frontend URLs allowed to call this API. Set CLIENT_URL to the deployed
 // frontend (comma-separate several), e.g. CLIENT_URL=https://liveprep.vercel.app
 const allowedOrigins = [
+    "https://live-prep.vercel.app",
     "http://localhost:5173",
     ...(process.env.CLIENT_URL || "")
         .split(",")
